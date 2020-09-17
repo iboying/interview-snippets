@@ -168,21 +168,16 @@ class EventEmitter {
     }
   }
 
-  once(name, fn) {
-    const wrap = function (...args) {
-      fn(...args);
-      this.off(name, fn);
-    };
-    wrap.callback = fn;
-    this.on(name, wrap);
-  }
-
-  emitOnce(name) {
+  emit(name, once = false) {
     if (this.cache[name]) {
-      for (let fn of this.cache[name]) {
+      // 创建副本，如果回调函数内继续注册相同事件，会造成死循环
+      const tasks = this.cache[name].slice()
+      for (let fn of tasks) {
         fn();
       }
-      delete this.cache[name];
+      if (once) {
+        delete this.cache[name]
+      }
     }
   }
 }
@@ -253,9 +248,9 @@ function instanceOf(instance, klass) {
 
 ```javascript
 /**
- * 核心知识点
- * 1. new promise 一经创建，立即执行，不可以用来添加异步任务
- * 2. 使用 Promise.resolve().then 可以把任务加到微任务队列，防止立即执行
+ * 关键点
+ * 1. new promise 一经创建，立即执行
+ * 2. 使用 Promise.resolve().then 可以把任务加到微任务队列，防止立即执行迭代方法
  * 3. 微任务处理过程中，产生的新的微任务，会在同一事件循环内，追加到微任务队列里
  * 4. 使用 race 在某个任务完成时，继续添加任务，保持任务按照最大并发数进行执行
  * 5. 任务完成后，需要从 doingTasks 中移出
@@ -295,7 +290,7 @@ function asyncAdd(a, b, callback) {
   }, 1000);
 }
 
-// 解决方案
+// 0. promisify
 const promiseAdd = (a, b) => new Promise((resolve, reject) => {
   asyncAdd(a, b, (err, res) => {
     if (err) {
