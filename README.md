@@ -1,137 +1,205 @@
-# 前端常见的功能实现
+# 前端面试常见的功能实现
+
+> 答案以实际面试为背景，一些细节会照顾不到，例如 promise 的实现只应对了简单的情况，这些足以满足面试，感兴趣的同学可以继续深挖以及学习社区开源库，例如 lodash
+
+欢迎一起补充 ~
 
 ## 1. 防抖
 
 ```javascript
-function debounce(func, ms = 500) {
+function debounce(func, ms = 1000) {
   let timer;
   return function (...args) {
     if (timer) {
-      clearTimeout(timer);
+      clearTimeout(timer)
     }
     timer = setTimeout(() => {
-      func.apply(this, args);
-    }, ms);
-  };
+      func.apply(this, args)
+    }, ms)
+  }
 }
+
+// 测试
+const task = () => { console.log('run task') }
+const debounceTask = debounce(task, 1000)
+window.addEventListener('scroll', debounceTask)
 ```
 
 ## 2. 节流
 
 ```javascript
-function throttle(func, ms) {
-  let canRun = true;
+function throttle(func, ms = 1000) {
+  let canRun = true
   return function (...args) {
-    if (!canRun) return;
-    canRun = false;
+    if (!canRun) return
+    canRun = false
     setTimeout(() => {
-      func.apply(this, args);
-      canRun = true;
-    }, ms);
-  };
+      func.apply(this, args)
+      canRun = true
+    }, ms)
+  }
 }
+
+// 测试
+const task = () => { console.log('run task') }
+const throttleTask = throttle(task, 1000)
+window.addEventListener('scroll', throttleTask)
 ```
 
 ## 3. new
 
 ```javascript
-function myNew(Func) {
+function myNew(Func, ...args) {
   const instance = {};
   if (Func.prototype) {
-    Object.setPrototypeOf(instance, Func.prototype);
+    Object.setPrototypeOf(instance, Func.prototype)
   }
-  const res = Func.apply(instance, [].slice.call(arguments, 1));
+  const res = Func.apply(instance, args)
   if (typeof res === "function" || (typeof res === "object" && res !== null)) {
-    return res;
+    return res
   }
-  return instance;
+  return instance
 }
+
+// 测试
+function Person(name) {
+  this.name = name
+}
+Person.prototype.sayName = function() {
+  console.log(`My name is ${this.name}`)
+}
+const me = myNew(Person, 'Jack')
+me.sayName()
+console.log(me)
 ```
 
 ## 4. bind
 
 ```javascript
 Function.prototype.myBind = function (context = globalThis) {
-  const fn = this;
-  const args = Array.from(arguments).slice(1);
+  const fn = this
+  const args = Array.from(arguments).slice(1)
   const newFunc = function () {
     if (this instanceof newFunc) {
       // 通过 new 调用，绑定 this 为实例对象
-      fn.apply(this, args);
+      fn.apply(this, args)
     } else {
       // 通过普通函数形式调用，绑定 context
-      fn.apply(context, args);
+      fn.apply(context, args)
     }
-  };
+  }
   // 支持 new 调用方式
-  newFunc.prototype = fn.prototype;
-  return newFunc;
-};
+  newFunc.prototype = fn.prototype
+  return newFunc
+}
+
+// 测试
+const me = { name: 'Jack' }
+const other = { name: 'Jackson' }
+function say() {
+  console.log(`My name is ${this.name || 'default'}`);
+}
+const meSay = say.bind(me)
+bindSay()
+const otherSay = say.bind(other)
+bndSay()
 ```
 
 ## 5. call
 
 ```javascript
 Function.prototype.myCall = function (context = globalThis) {
-  // 关键步骤，在 context 上调用方法，触发 this 绑定为 context
-  context.fn = this;
-  let args = [].slice.call(arguments, 1);
-  let res = context.fn(...args);
-  delete context.fn;
-  return res;
+  // 关键步骤，在 context 上调用方法，触发 this 绑定为 context，使用 Symbol 防止原有属性的覆盖
+  const key = Symbol('key')
+  context[key] = this
+  let args = [].slice.call(arguments, 1)
+  let res = context[key](...args)
+  delete context[key]
+  return res
 };
+
+// 测试
+const me = { name: 'Jack' }
+function say() {
+  console.log(`My name is ${this.name || 'default'}`);
+}
+say.myCall(me)
 ```
 
 ## 6. apply
 
 ```javascript
 Function.prototype.myApply = function (context = globalThis) {
-  // 关键步骤，在 context 上调用方法，触发 this 绑定为 context
-  context.fn = this;
-  let res;
+  // 关键步骤，在 context 上调用方法，触发 this 绑定为 context，使用 Symbol 防止原有属性的覆盖
+  const key = Symbol('key')
+  context[key] = this
+  let res
   if (arguments[1]) {
-    res = context.fn(...arguments[1]);
+    res = context[key](...arguments[1])
   } else {
-    res = context.fn();
+    res = context[key]()
   }
-  delete context.fn;
-  return res;
-};
+  delete context[key]
+  return res
+}
+
+// 测试
+const me = { name: 'Jack' }
+function say() {
+  console.log(`My name is ${this.name || 'default'}`);
+}
+say.myApply(me)
 ```
 
 ## 7. deepCopy
 
 ```javascript
 function deepCopy(obj, cache = new WeakMap()) {
-  if (!obj instanceof Object) return obj;
+  if (!obj instanceof Object) return obj
   // 防止循环引用
-  if (cache.get(obj)) return cache.get(obj);
+  if (cache.get(obj)) return cache.get(obj)
   // 支持函数
   if (obj instanceof Function) {
     return function () {
-      obj.apply(this, arguments);
-    };
+      obj.apply(this, arguments)
+    }
   }
   // 支持日期
-  if (obj instanceof Date) return new Date(obj);
+  if (obj instanceof Date) return new Date(obj)
   // 支持正则对象
-  if (obj instanceof RegExp) return new RegExp(obj.source, obj.flags);
+  if (obj instanceof RegExp) return new RegExp(obj.source, obj.flags)
   // 还可以增加其他对象，比如：Map, Set等，根据情况判断增加即可，面试点到为止就可以了
 
   // 数组是 key 为数字素银的特殊对象
-  const res = Array.isArray(obj) ? [] : {};
-  // 缓存 copy 的对象，用于出来循环引用的情况
-  cache.set(obj, res);
+  const res = Array.isArray(obj) ? [] : {}
+  // 缓存 copy 的对象，用于处理循环引用的情况
+  cache.set(obj, res)
 
   Object.keys(obj).forEach((key) => {
     if (obj[key] instanceof Object) {
-      res[key] = deepCopy(obj[key], cache);
+      res[key] = deepCopy(obj[key], cache)
     } else {
-      res[key] = obj[key];
+      res[key] = obj[key]
     }
   });
-  return res;
+  return res
 }
+
+// 测试
+const source = {
+  name: 'Jack',
+  meta: {
+    age: 12,
+    birth: new Date('1997-10-10'),
+    ary: [1, 2, { a: 1 }],
+    say() {
+      console.log('Hello');
+    }
+  }
+}
+source.source = source
+const newObj = deepCopy(source)
+console.log(newObj.meta.ary[2] === source.meta.ary[2]);
 ```
 
 ## 8. 事件总线 | 发布订阅模式
@@ -139,30 +207,32 @@ function deepCopy(obj, cache = new WeakMap()) {
 ```javascript
 class EventEmitter {
   constructor() {
-    this.cache = {};
+    this.cache = {}
   }
 
   on(name, fn) {
     if (this.cache[name]) {
-      this.cache[name].push(fn);
+      this.cache[name].push(fn)
     } else {
-      this.cache[name] = [fn];
+      this.cache[name] = [fn]
     }
   }
 
   off(name, fn) {
-    const tasks = this.cache[name];
+    const tasks = this.cache[name]
     if (tasks) {
-      const index = tasks.findIndex((f) => f === fn || f.callback === fn);
+      const index = tasks.findIndex((f) => f === fn || f.callback === fn)
       if (index >= 0) {
-        tasks.splice(index, 1);
+        tasks.splice(index, 1)
       }
     }
   }
 
   emit(name) {
     if (this.cache[name]) {
-      for (let fn of this.cache[name]) {
+      // 创建副本，如果回调函数内继续注册相同事件，会造成死循环
+      const tasks = this.cache[name].slice()
+      for (let fn of tasks) {
         fn();
       }
     }
@@ -181,6 +251,17 @@ class EventEmitter {
     }
   }
 }
+
+// 测试
+const eventBus = new EventEmitter()
+const task1 = () => { console.log('task1'); }
+const task2 = () => { console.log('task2'); }
+eventBus.on('task', task1)
+eventBus.on('task', task2)
+
+setTimeout(() => {
+  eventBus.emit('task')
+}, 1000)
 ```
 
 ## 9. 柯里化：只传递给函数一部分参数来调用它，让它返回一个函数去处理剩下的参数
@@ -188,15 +269,25 @@ class EventEmitter {
 ```javascript
 function curry(func) {
   return function curried(...args) {
+    // 关键知识点：function.length 用来获取函数的形参个数
+    // 补充：arguments.length 获取的是实参个数
     if (args.length >= func.length) {
-      func.apply(this, args);
-    } else {
-      return function (...args2) {
-        curried.apply(this, args.concat(args2));
-      };
+      return func.apply(this, args)
     }
-  };
+    return function (...args2) {
+      return curried.apply(this, args.concat(args2))
+    }
+  }
 }
+
+// 测试
+function sum (a, b, c) {
+  return a + b + c
+}
+const curriedSum = curry(sum)
+console.log(curriedSum(1, 2, 3))
+console.log(curriedSum(1)(2,3))
+console.log(curriedSum(1)(2)(3))
 ```
 
 ## 10. es5 实现继承
@@ -210,38 +301,49 @@ function create(proto) {
 
 // Parent
 function Parent(name) {
-  this.name = name;
+  this.name = name
 }
 
-Parent.prototype.say = function () {
-  console.log(this.name);
+Parent.prototype.sayName = function () {
+  console.log(this.name)
 };
 
 // Child
 function Child(age, name) {
-  Parent.call(this, name);
-  this.age = age;
+  Parent.call(this, name)
+  this.age = age
 }
-Child.prototype = create(Parent.prototype);
-Child.prototype.constructor = Child;
+Child.prototype = create(Parent.prototype)
+Child.prototype.constructor = Child
 
-Child.prototype.say = function () {
-  console.log(this.age);
-};
+Child.prototype.sayAge = function () {
+  console.log(this.age)
+}
+
+// 测试
+const child = new Child(18, 'Jack')
+child.sayName()
+child.sayAge()
 ```
 
 ## 11. instanceof
 
 ```javascript
-function instanceOf(instance, klass) {
-  let proto = instance.__proto__;
-  let prototype = klass.prototype;
+function isInstanceOf(instance, klass) {
+  let proto = instance.__proto__
+  let prototype = klass.prototype
   while (true) {
-    if (proto === null) return false;
-    if (proto === prototype) return true;
-    proto = proto.__proto__;
+    if (proto === null) return false
+    if (proto === prototype) return true
+    proto = proto.__proto__
   }
 }
+
+// 测试
+class Parent {}
+class Child extends Parent {}
+const child = new Child()
+console.log(isInstanceOf(child, Parent), isInstanceOf(child, Child), isInstanceOf(child, Array));
 ```
 
 ## 12. 异步并发数限制
@@ -256,27 +358,27 @@ function instanceOf(instance, klass) {
  * 5. 任务完成后，需要从 doingTasks 中移出
  */
 function limit(count, array, iterateFunc) {
-  const tasks = [];
-  const doingTasks = [];
-  let i = 0;
+  const tasks = []
+  const doingTasks = []
+  let i = 0
   const enqueue = () => {
     if (i === array.length) {
-      return Promise.resolve();
+      return Promise.resolve()
     }
-    const task = Promise.resolve().then(() => iterateFunc(array[i++]));
-    tasks.push(task);
-    const doing = task.then(() => doingTasks.splice(doingTasks.indexOf(doing), 1));
-    doingTasks.push(doing);
-    const res = doingTasks.length >= count ? Promise.race(doingTasks) : Promise.resolve();
-    return res.then(enqueue);
+    const task = Promise.resolve().then(() => iterateFunc(array[i++]))
+    tasks.push(task)
+    const doing = task.then(() => doingTasks.splice(doingTasks.indexOf(doing), 1))
+    doingTasks.push(doing)
+    const res = doingTasks.length >= count ? Promise.race(doingTasks) : Promise.resolve()
+    return res.then(enqueue)
   };
-  return enqueue().then(() => Promise.all(tasks));
+  return enqueue().then(() => Promise.all(tasks))
 }
 
 // test
-const timeout = i => new Promise(resolve => setTimeout(() => resolve(i), i));
-limit(4, [1000, 1000, 1000, 1000], timeout).then((res) => {
-  console.log(res);
+const timeout = i => new Promise(resolve => setTimeout(() => resolve(i), i))
+limit(2, [1000, 1000, 1000, 1000], timeout).then((res) => {
+  console.log(res)
 })
 ```
 
@@ -287,10 +389,11 @@ limit(4, [1000, 1000, 1000, 1000], timeout).then((res) => {
 function asyncAdd(a, b, callback) {
   setTimeout(function () {
     callback(null, a + b);
-  }, 1000);
+  }, 500);
 }
 
-// 0. promisify
+// 解决方案
+// 1. promisify
 const promiseAdd = (a, b) => new Promise((resolve, reject) => {
   asyncAdd(a, b, (err, res) => {
     if (err) {
@@ -301,12 +404,12 @@ const promiseAdd = (a, b) => new Promise((resolve, reject) => {
   })
 })
 
-// 1. 串行处理
+// 2. 串行处理
 async function serialSum(...args) {
   return args.reduce((task, now) => task.then(res => promiseAdd(res, now)), Promise.resolve(0))
 }
 
-// 2. 并行处理
+// 3. 并行处理
 async function parallelSum(...args) {
   if (args.length === 1) return args[0]
   const tasks = []
@@ -319,10 +422,12 @@ async function parallelSum(...args) {
 
 // 测试
 (async () => {
+  console.log('Running...');
   const res1 = await serialSum(1, 2, 3, 4, 5, 8, 9, 10, 11, 12)
   console.log(res1)
   const res2 = await parallelSum(1, 2, 3, 4, 5, 8, 9, 10, 11, 12)
   console.log(res2)
+  console.log('Done');
 })()
 ```
 
@@ -383,7 +488,7 @@ function defineReactive(obj, k, val) {
       dep.notify()
     }
   })
-  if (isObj(val)) {
+  if (val && typeof val === 'object') {
     reactive(val)
   }
 }
@@ -491,18 +596,100 @@ new MyPromise((resolve) => {
   setTimeout(() => {
     resolve(1);
   }, 500);
-})
-  .then((res) => {
+}).then((res) => {
     console.log(res);
     return new MyPromise((resolve) => {
       setTimeout(() => {
         resolve(2);
       }, 500);
     });
-  })
-  .then((res) => {
+  }).then((res) => {
     console.log(res);
-  }, err => {
+    throw new Error('a error')
+  }).catch((err) => {
     console.log('==>', err);
-  });
+  })
+```
+
+## 16. 数组扁平化
+
+```javascript
+// 方案 1
+function recursionFlat(ary = []) {
+  const res = []
+  ary.forEach(item => {
+    if (Array.isArray(item)) {
+      res.push(...recursionFlat(item))
+    } else {
+      res.push(item)
+    }
+  })
+  return res
+}
+// 方案 2
+function reduceFlat(ary = []) {
+  return ary.reduce((res, item) => res.concat(Array.isArray(item) ? reduceFlat(item) : item), [])
+}
+
+// 测试
+const source = [1, 2, [3, 4, [5, 6]], '7']
+console.log(recursionFlat(source))
+console.log(reduceFlat(source))
+```
+
+## 17. 对象扁平化
+
+```javascript
+function objectFlat(obj = {}) {
+  const res = {}
+  function flat(item, preKey = '') {
+    Object.entries(item).forEach(([key, val]) => {
+      const newKey = preKey ? `${preKey}.${key}` : key
+      if (val && typeof val === 'object') {
+        flat(val, newKey)
+      } else {
+        res[newKey] = val
+      }
+    })
+  }
+  flat(obj)
+  return res
+}
+
+// 测试
+const source = { a: { b: { c: 1, d: 2 }, e: 3 }, f: { g: 2 } }
+console.log(objectFlat(source));
+```
+
+## 18. 图片懒加载
+
+```javascript
+// <img src="default.png" data-src="https://xxxx/real.png">
+function isVisible(el) {
+  const position = el.getBoundingClientRect()
+  const windowHeight = document.documentElement.clientHeight
+  // 顶部边缘可见
+  const topVisible = position.top > 0 && position.top < windowHeight;
+  // 底部边缘可见
+  const bottomVisible = position.bottom < windowHeight && position.bottom > 0;
+  return topVisible || bottomVisible;
+}
+
+function imageLazyLoad() {
+  const images = document.querySelectorAll('img')
+  for (let img of images) {
+    const realSrc = img.dataset.src
+    if (!realSrc) continue
+    if (isVisible(img)) {
+      img.src = realSrc
+      img.dataset.src = ''
+    }
+  }
+}
+
+// 测试
+window.addEventListener('load', imageLazyLoad)
+window.addEventListener('scroll', imageLazyLoad)
+// or
+window.addEventListener('scroll', throttle(imageLazyLoad, 1000))
 ```
