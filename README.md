@@ -1,4 +1,4 @@
-# 前端面试常见的功能实现
+# 前端面试常见功能的简单实现
 
 > 答案以实际面试为背景，一些细节会照顾不到，例如 promise 的实现只应对了简单的情况，这些足以满足面试，感兴趣的同学可以继续深挖以及学习社区开源库，例如 lodash
 
@@ -80,16 +80,17 @@ Function.prototype.myBind = function (context = globalThis) {
   const fn = this
   const args = Array.from(arguments).slice(1)
   const newFunc = function () {
+    const newArgs = args.concat(...arguments)
     if (this instanceof newFunc) {
       // 通过 new 调用，绑定 this 为实例对象
-      fn.apply(this, args)
+      fn.apply(this, newArgs)
     } else {
       // 通过普通函数形式调用，绑定 context
-      fn.apply(context, args)
+      fn.apply(context, newArgs)
     }
   }
   // 支持 new 调用方式
-  newFunc.prototype = fn.prototype
+  newFunc.prototype = Object.create(fn.prototype)
   return newFunc
 }
 
@@ -100,9 +101,9 @@ function say() {
   console.log(`My name is ${this.name || 'default'}`);
 }
 const meSay = say.bind(me)
-bindSay()
+meSay()
 const otherSay = say.bind(other)
-bndSay()
+otherSay()
 ```
 
 ## 5. call
