@@ -295,6 +295,9 @@ console.log(curriedSum(1)(2)(3))
 
 ```javascript
 function create(proto) {
+  const type = typeof proto
+  const isObject = type === 'function' || type === 'object' && !!proto
+  if (!isObject) return {}
   function F() {}
   F.prototype = proto;
   return new F();
