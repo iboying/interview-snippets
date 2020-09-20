@@ -113,7 +113,8 @@ Function.prototype.myCall = function (context = globalThis) {
   // 关键步骤，在 context 上调用方法，触发 this 绑定为 context，使用 Symbol 防止原有属性的覆盖
   const key = Symbol('key')
   context[key] = this
-  let args = [].slice.call(arguments, 1)
+  // es5 可通过 for 循环遍历出类数组对象 arguments 的元素，此处取巧使用 es6 spread 语法快速做一下演示
+  let args = [...arguments].slice(1)
   let res = context[key](...args)
   delete context[key]
   return res
@@ -200,7 +201,8 @@ const source = {
 }
 source.source = source
 const newObj = deepCopy(source)
-console.log(newObj.meta.ary[2] === source.meta.ary[2]);
+console.log(newObj.meta.ary[2] === source.meta.ary[2]); // false
+console.log(newObj.meta.birth === source.meta.birth); // false
 ```
 
 ## 8. 事件总线 | 发布订阅模式
