@@ -100,9 +100,9 @@ const other = { name: 'Jackson' }
 function say() {
   console.log(`My name is ${this.name || 'default'}`);
 }
-const meSay = say.bind(me)
+const meSay = say.myBind(me)
 meSay()
-const otherSay = say.bind(other)
+const otherSay = say.myBind(other)
 otherSay()
 ```
 
